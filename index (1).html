@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>วงล้อผู้โชคดี ราชธานีลิสซิ่ง</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
+<style>
+/* Layout: wheel stage on the right, import + winners panel on the left; stacks with the wheel first on phones. */
+:root {
+  --bg: #EDF0F6;
+  --surface: #FFFFFF;
+  --surface-2: #F3F5FA;
+  --fg: #0F1A30;
+  --muted: #566178;
+  --line: #D3DAE7;
+  --accent: #E5A100;
+  --accent-fg: #1A1300;
+  --accent-soft: rgba(229, 161, 0, 0.16);
+  --danger: #C8384F;
+  --ok: #14865F;
+  --rim: #1B2A44;
+  --hub-bg: #FFFFFF;
+  --hub-fg: #14284B;
+  --scrim: rgba(15, 26, 48, 0.55);
+  --shadow: 0 18px 44px rgba(15, 26, 48, 0.18);
+  --font-display: 'Kanit', 'Noto Sans Thai', system-ui, sans-serif;
+  --font-body: 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A111F;
+    --surface: #121B2E;
+    --surface-2: #0D1525;
+    --fg: #EDF1F9;
+    --muted: #94A1BA;
+    --line: #25304A;
+    --accent: #F4B71A;
+    --accent-fg: #1A1300;
+    --accent-soft: rgba(244, 183, 26, 0.16);
+    --danger: #F0647B;
+    --ok: #3CCB98;
+    --rim: #2A3957;
+    --scrim: rgba(3, 7, 15, 0.72);
+    --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0A111F;
+  --surface: #121B2E;
+  --surface-2: #0D1525;
+  --fg: #EDF1F9;
+  --muted: #94A1BA;
+  --line: #25304A;
+  --accent: #F4B71A;
+  --accent-fg: #1A1300;
+  --accent-soft: rgba(244, 183, 26, 0.16);
+  --danger: #F0647B;
+  --ok: #3CCB98;
+  --rim: #2A3957;
+  --scrim: rgba(3, 7, 15, 0.72);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  padding-block: 20px 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.app { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 16px; }
+.top h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 4.4vw, 40px); line-height: 1.15; text-wrap: balance; }
+.top p { margin: 2px 0 0; color: var(--muted); }
+.total { font-family: var(--font-display); font-weight: 500; color: var(--muted); }
+.total b { font-weight: 800; font-size: 1.5em; color: var(--fg); font-variant-numeric: tabular-nums; }
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
+  grid-template-areas: "panel stage";
+  gap: 20px;
+  align-items: start;
+}
+.stage { grid-area: stage; min-width: 0; }
+.panel { grid-area: panel; min-width: 0; }
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage" "panel"; }
+}
+
+.stage-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px 14px 22px;
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+#fit { width: 100%; }
+.wheel { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; padding-top: 18px; }
+.disc { position: relative; border-radius: 50%; box-shadow: 0 14px 44px rgba(0, 0, 0, 0.38), 0 0 60px rgba(255, 195, 0, 0.18); }
+#cv { display: block; border-radius: 50%; will-change: transform; }
+.pointer {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%); transform-origin: 50% 0; z-index: 3;
+  width: 0; height: 0;
+  border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 34px solid var(--accent);
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
+}
+.hub {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
+  border-radius: 50%; background: var(--hub-bg); border: 4px solid var(--rim);
+  display: grid; place-items: center; overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  color: var(--hub-fg); font-family: var(--font-display); font-weight: 800; text-align: center; line-height: 1.1;
+}
+.hub img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+
+.ticker {
+  display: flex; align-items: baseline; justify-content: center; gap: 10px; flex-wrap: wrap;
+  min-height: 48px; width: min(100%, 520px);
+  padding: 8px 18px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line);
+}
+.ticker small { color: var(--muted); }
+.ticker strong { font-family: var(--font-display); font-weight: 700; font-size: 20px; overflow-wrap: anywhere; }
+
+.spin {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(22px, 3.4vw, 28px); letter-spacing: 0.04em;
+  background: var(--accent); color: var(--accent-fg);
+  border: 0; border-radius: 999px; padding: 14px 56px; cursor: pointer;
+  box-shadow: 0 0 0 6px var(--accent-soft), 0 10px 24px rgba(0, 0, 0, 0.25);
+  transition: transform .12s ease, filter .12s ease;
+}
+.spin:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.spin:active:not(:disabled) { transform: translateY(1px); }
+.spin:disabled { opacity: 0.5; cursor: not-allowed; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; }
+.sound[aria-pressed="false"] { color: var(--muted); }
+
+.panel-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px;
+  display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
+}
+.panel-card:last-child { margin-bottom: 0; }
+.panel-card h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 19px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pill { font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--accent-fg); background: var(--accent); border-radius: 999px; padding: 1px 10px; font-variant-numeric: tabular-nums; }
+.hint { margin: 0; color: var(--muted); font-size: 13.5px; }
+textarea {
+  width: 100%; height: 200px; resize: vertical; padding: 10px 12px; font-size: 14px; line-height: 1.5;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 8px 14px;
+  font-weight: 600; cursor: pointer; transition: filter .12s ease;
+}
+.btn:hover:not(:disabled) { filter: brightness(0.96); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); flex: 1 1 auto; }
+.btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.dirty { margin: 0; font-size: 13px; color: var(--danger); font-weight: 600; }
+
+.history { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+.history li {
+  display: flex; gap: 10px; align-items: baseline; padding: 7px 10px; border-radius: 10px; background: var(--surface-2);
+  user-select: text;
+}
+.history .no { font-family: var(--font-display); font-weight: 700; color: var(--muted); min-width: 3.4em; font-variant-numeric: tabular-nums; }
+.history .nm { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.empty { margin: 0; color: var(--muted); font-size: 13.5px; }
+
+.result {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+  background: var(--scrim);
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.result[hidden] { display: none; }
+.result-card {
+  width: min(100%, 560px); background: var(--surface); border: 2px solid var(--accent); border-radius: 24px;
+  padding: 28px 22px 22px; text-align: center; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 10px; align-items: center;
+}
+.result-card .eyebrow { margin: 0; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
+.result-card .win { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(32px, 8vw, 60px); line-height: 1.15; color: var(--accent); overflow-wrap: anywhere; text-wrap: balance; }
+.result-card .meta { margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.result-card .row { justify-content: center; margin-top: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spin, .btn { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>วงล้อผู้โชคดี</h1>
+      <p>ราชธานี ลิสซิ่ง · วางรายชื่อ แล้วกด SPIN เพื่อจับรางวัล</p>
+    </div>
+    <div class="total"><b id="total">250</b> คนในวงล้อ</div>
+  </header>
+
+  <main class="grid">
+    <section class="stage" aria-label="วงล้อสุ่มรายชื่อ">
+      <div class="stage-card">
+        <div id="fit">
+          <div class="wheel" id="wheel">
+            <div class="pointer" aria-hidden="true"></div>
+            <div class="disc" id="disc">
+              <canvas id="cv" role="img" aria-label="วงล้อรายชื่อผู้เข้าร่วม"></canvas>
+              <div class="hub" id="hub"><span id="hubtext">ราชธานี<br>ลิสซิ่ง</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="ticker" aria-hidden="true"><small>ตัวชี้อยู่ที่</small><strong id="ticker">-</strong></div>
+        <p class="hint" id="labelnote" hidden style="margin:0;text-align:center">รายชื่อเยอะเกินกว่าจะแสดงบนวงล้อได้ ดูชื่อที่ตัวชี้ได้จากแถบด้านบน</p>
+        <div class="controls">
+          <button class="spin" id="spin" type="button">SPIN !</button>
+          <button class="btn sound" id="btn-sound" type="button" aria-pressed="true">เสียง: เปิด</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-card">
+        <h2>นำเข้ารายชื่อ <span class="pill" id="count">250 คน</span></h2>
+        <p class="hint">พิมพ์หรือวางรายชื่อ บรรทัดละ 1 คน ตอนนี้เป็นรายชื่อตัวอย่าง 250 คน</p>
+        <textarea id="names-input" spellcheck="false" aria-label="รายชื่อผู้เข้าร่วม บรรทัดละ 1 คน"></textarea>
+        <p class="dirty" id="dirty" hidden>มีการแก้ไขที่ยังไม่ได้อัปเดตลงวงล้อ</p>
+        <div class="row">
+          <button class="btn primary" id="btn-import" type="button">อัปเดตรายชื่อลงวงล้อ</button>
+          <button class="btn" id="btn-sample" type="button">ตัวอย่าง 250 คน</button>
+          <button class="btn" id="btn-500" type="button">ผู้โชคดี 001–500</button>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <h2>ผู้โชคดีที่ได้รับรางวัล <span class="pill" id="hcount">0</span></h2>
+        <ol class="history" id="history"></ol>
+        <p class="empty" id="hempty">ยังไม่มีผู้โชคดี กด SPIN เพื่อเริ่มสุ่มรอบแรก</p>
+        <div class="row"><button class="btn" id="btn-copy" type="button" disabled>คัดลอกรายชื่อผู้โชคดี</button></div>
+      </div>
+
+      <div class="panel-card">
+        <h2>โลโก้กลางวงล้อ</h2>
+        <p class="hint">เลือกไฟล์ภาพโลโก้จากเครื่อง ระบบจะจำไว้ในเบราว์เซอร์นี้</p>
+        <div class="row">
+          <button class="btn" id="btn-logo" type="button">เลือกไฟล์โลโก้</button>
+          <button class="btn" id="btn-logo-reset" type="button">ใช้ข้อความแทน</button>
+        </div>
+        <input id="logo-file" type="file" accept="image/*" hidden>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="result" id="result" hidden role="dialog" aria-modal="true" aria-labelledby="res-name">
+  <div class="result-card">
+    <p class="eyebrow">ผู้โชคดีคือ</p>
+    <p class="win" id="res-name"></p>
+    <p class="meta" id="res-meta"></p>
+    <div class="row">
+      <button class="btn danger" id="res-remove" type="button">ตัดชื่อออกจากวงล้อ</button>
+      <button class="btn" id="res-close" type="button">เก็บชื่อไว้และปิด</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var COLORS = ['#E5383B', '#F77F00', '#FFC300', '#1FA463', '#0E9FB5', '#3A6FF0', '#8E44EC', '#E8478B'];
+  var DEFAULT_NAMES = [];
+  for (var k = 1; k <= 250; k++) DEFAULT_NAMES.push('ผู้โชคดี ' + k);
+
+  var $ = function (id) { return document.getElementById(id); };
+  var canvas = $('cv'), hub = $('hub'), disc = $('disc');
+  var names = DEFAULT_NAMES.slice();
+  var rotation = 0, spinning = false, size = 560;
+  var winnerIdx = -1, drawNo = 0, history = [];
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function rand() { return crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296; }
+  function randInt(n) { return Math.floor(rand() * n); }
+  function mod(a, m) { return ((a % m) + m) % m; }
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+  function parseNames(text) {
+    return text.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(function (s) { return s !== ''; });
+  }
+
+  /* ---------- wheel drawing ---------- */
+  function sliceColor(i, n) {
+    var c = i % COLORS.length;
+    if (n > 1 && i === n - 1 && c === 0) c = 4;
+    return COLORS[c];
+  }
+  function inkFor(hex) {
+    var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 140 ? '#1A1300' : '#FFFFFF';
+  }
+
+  function draw() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    var S = size;
+    canvas.width = Math.round(S * dpr);
+    canvas.height = Math.round(S * dpr);
+    canvas.style.width = S + 'px';
+    canvas.style.height = S + 'px';
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, S, S);
+
+    var c = S / 2, rim = Math.max(10, S * 0.034), R = c - rim;
+    var hubR = S * 0.085;
+    var n = names.length;
+
+    if (n === 0) {
+      $('labelnote').hidden = true;
+      ctx.beginPath(); ctx.arc(c, c, R, 0, Math.PI * 2);
+      ctx.fillStyle = cssVar('--surface-2'); ctx.fill();
+      ctx.fillStyle = cssVar('--muted');
+      ctx.font = '600 ' + Math.round(S * 0.04) + 'px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('ยังไม่มีรายชื่อ', c, c + hubR + S * 0.06);
+    } else {
+      var s = Math.PI * 2 / n;
+      var base = -Math.PI / 2;
+      for (var i = 0; i < n; i++) {
+        ctx.beginPath();
+        ctx.moveTo(c, c);
+        ctx.arc(c, c, R, base + s * i, base + s * (i + 1) + (n > 1 ? 0.003 : 0));
+        ctx.closePath();
+        ctx.fillStyle = sliceColor(i, n);
+        ctx.fill();
+      }
+      if (n <= 80 && n > 1) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 1;
+        for (var j = 0; j < n; j++) {
+          var a = base + s * j;
+          ctx.beginPath();
+          ctx.moveTo(c + Math.cos(a) * hubR, c + Math.sin(a) * hubR);
+          ctx.lineTo(c + Math.cos(a) * R, c + Math.sin(a) * R);
+          ctx.stroke();
+        }
+      }
+
+      var sh = ctx.createRadialGradient(c, c, hubR, c, c, R);
+      sh.addColorStop(0, 'rgba(0,0,0,0.30)');
+      sh.addColorStop(0.55, 'rgba(0,0,0,0)');
+      sh.addColorStop(1, 'rgba(255,255,255,0.18)');
+      ctx.beginPath(); ctx.arc(c, c, R, 0, Math.PI * 2); ctx.fillStyle = sh; ctx.fill();
+
+      var fs = Math.max(5, Math.min(20, s * R * 0.62));
+      ctx.font = '600 ' + fs + 'px "Noto Sans Thai", sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'right';
+      var maxW = R - hubR - 22;
+      var showLabels = s * R * 0.62 >= 4;
+      $('labelnote').hidden = showLabels;
+      for (var m = 0; showLabels && m < n; m++) {
+        ctx.save();
+        ctx.translate(c, c);
+        ctx.rotate(base + s * (m + 0.5));
+        ctx.fillStyle = inkFor(sliceColor(m, n));
+        ctx.fillText(fit(ctx, names[m], maxW), R - 10, 0);
+        ctx.restore();
+      }
+    }
+
+    ctx.beginPath(); ctx.arc(c, c, R + rim / 2, 0, Math.PI * 2);
+    ctx.lineWidth = rim; ctx.strokeStyle = cssVar('--rim'); ctx.stroke();
+
+    var bulbs = 40, br = rim * 0.27;
+    for (var q = 0; q < bulbs; q++) {
+      var ba = base0() + q * Math.PI * 2 / bulbs;
+      ctx.beginPath();
+      ctx.arc(c + Math.cos(ba) * (R + rim / 2), c + Math.sin(ba) * (R + rim / 2), br, 0, Math.PI * 2);
+      ctx.shadowColor = q % 2 ? '#FFFFFF' : '#FFC300';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = q % 2 ? '#FFFFFF' : '#FFD23F';
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+
+    var hubD = Math.round(S * 0.17);
+    hub.style.width = hubD + 'px';
+    hub.style.height = hubD + 'px';
+    hub.style.fontSize = Math.max(10, Math.round(S * 0.026)) + 'px';
+    disc.style.width = S + 'px';
+    disc.style.height = S + 'px';
+    canvas.style.transform = 'rotate(' + rotation + 'deg)';
+    updateTicker();
+  }
+
+  function base0() { return -Math.PI / 2; }
+
+  function fit(ctx, text, maxW) {
+    if (ctx.measureText(text).width <= maxW) return text;
+    var t = text;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
+  }
+
+  function pointerIndex() {
+    var n = names.length;
+    if (!n) return -1;
+    var s = 360 / n;
+    return Math.min(n - 1, Math.floor(mod(-rotation, 360) / s));
+  }
+  function updateTicker() {
+    var i = pointerIndex();
+    $('ticker').textContent = i < 0 ? '-' : names[i];
+  }
+
+  function computeSize() {
+    var w = $('fit').clientWidth || 560;
+    var availH = window.innerHeight - 250;
+    var s = Math.min(w, 760, Math.max(availH, 320));
+    s = Math.max(280, Math.floor(s));
+    if (Math.abs(s - size) > 1) { size = s; draw(); }
+  }
+
+  /* ---------- names + panel ---------- */
+  function setNames(list, syncTextarea) {
+    names = list;
+    if (syncTextarea) $('names-input').value = names.join('\n');
+    $('count').textContent = names.length + ' คน';
+    $('total').textContent = names.length;
+    $('spin').disabled = spinning || names.length === 0;
+    $('dirty').hidden = true;
+    draw();
+  }
+
+  function checkDirty() {
+    var cur = parseNames($('names-input').value);
+    var same = cur.length === names.length && cur.every(function (v, i) { return v === names[i]; });
+    $('dirty').hidden = same;
+  }
+
+  $('names-input').addEventListener('input', checkDirty);
+  $('btn-import').addEventListener('click', function () {
+    if (spinning) return;
+    setNames(parseNames($('names-input').value), false);
+  });
+  $('btn-sample').addEventListener('click', function () {
+    if (spinning) return;
+    setNames(DEFAULT_NAMES.slice(), true);
+  });
+  $('btn-500').addEventListener('click', function () {
+    if (spinning) return;
+    var list = [];
+    for (var i = 1; i <= 500; i++) list.push('ผู้โชคดี ' + ('00' + i).slice(-3));
+    setNames(list, true);
+  });
+
+  /* ---------- sound ---------- */
+  var audio = { ctx: null, master: null, on: true };
+  var SOUND_KEY = 'lucky-wheel-sound';
+  var lastPi = -1, lastTick = 0;
+  var pointerEl = document.querySelector('.pointer');
+  try { if (localStorage.getItem(SOUND_KEY) === 'off') audio.on = false; } catch (e) {}
+
+  function paintSound() {
+    var b = $('btn-sound');
+    b.setAttribute('aria-pressed', audio.on ? 'true' : 'false');
+    b.textContent = audio.on ? 'เสียง: เปิด' : 'เสียง: ปิด';
+  }
+  function ensureAudio() {
+    if (!audio.on) return null;
+    try {
+      if (!audio.ctx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        audio.ctx = new AC();
+        audio.master = audio.ctx.createGain();
+        audio.master.gain.value = 0.8;
+        audio.master.connect(audio.ctx.destination);
+      }
+      if (audio.ctx.state === 'suspended') audio.ctx.resume();
+      return audio.ctx;
+    } catch (e) { return null; }
+  }
+  function blip(freq, delay, dur, type, vol, endFreq) {
+    if (!audio.on || !audio.ctx) return;
+    var c = audio.ctx, t = c.currentTime + delay;
+    var o = c.createOscillator(), g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(audio.master);
+    o.start(t); o.stop(t + dur + 0.03);
+  }
+  function noiseSrc(c, sec) {
+    var len = Math.floor(c.sampleRate * sec), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    var s = c.createBufferSource(); s.buffer = buf;
+    return s;
+  }
+  function sfxStart() {
+    if (!audio.on || !audio.ctx) return;
+    var c = audio.ctx, t = c.currentTime;
+    var n = noiseSrc(c, 1.2), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(300, t);
+    f.frequency.exponentialRampToValueAtTime(2600, t + 0.9);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.35, t + 0.25);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    n.connect(f); f.connect(g); g.connect(audio.master);
+    n.start(t); n.stop(t + 1.2);
+    blip(330, 0, 0.55, 'sawtooth', 0.05, 990);
+  }
+  function sfxTick() { blip(1500 + Math.random() * 200, 0, 0.035, 'triangle', 0.16, 900); }
+  function sfxWin() {
+    if (!audio.on || !audio.ctx) return;
+    var c = audio.ctx;
+    [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) {
+      blip(f, i * 0.12, 0.28, 'triangle', 0.22);
+      blip(f * 2, i * 0.12, 0.2, 'sine', 0.06);
+    });
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach(function (f) { blip(f, 0.55, 1.3, 'triangle', 0.13); });
+    for (var i = 0; i < 9; i++) blip(2200 + Math.random() * 2200, 0.5 + i * 0.11, 0.18, 'sine', 0.05);
+    var t = c.currentTime + 0.5;
+    var n = noiseSrc(c, 1.7), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.8;
+    g.gain.setValueAtTime(0.0001, t);
+    for (var k = 0; k < 40; k++) g.gain.setValueAtTime(0.03 + Math.random() * 0.1, t + 0.05 + k * 0.04);
+    g.gain.linearRampToValueAtTime(0.0001, t + 1.65);
+    n.connect(f); f.connect(g); g.connect(audio.master);
+    n.start(t); n.stop(t + 1.7);
+  }
+  function flick() {
+    if (reduceMotion || !pointerEl || !pointerEl.animate) return;
+    pointerEl.animate([
+      { transform: 'translateX(-50%) rotate(0deg)' },
+      { transform: 'translateX(-50%) rotate(-14deg)', offset: 0.35 },
+      { transform: 'translateX(-50%) rotate(0deg)' }
+    ], { duration: 90 });
+  }
+  paintSound();
+  $('btn-sound').addEventListener('click', function () {
+    audio.on = !audio.on;
+    try { localStorage.setItem(SOUND_KEY, audio.on ? 'on' : 'off'); } catch (e) {}
+    paintSound();
+    if (audio.on && ensureAudio()) blip(880, 0, 0.14, 'sine', 0.15);
+  });
+
+  /* ---------- spin ---------- */
+  function spin() {
+    if (spinning || !names.length) return;
+    spinning = true;
+    $('spin').disabled = true;
+    $('spin').textContent = 'กำลังสุ่ม...';
+    $('btn-import').disabled = true;
+    $('btn-sample').disabled = true;
+    $('btn-500').disabled = true;
+    hideResult();
+    ensureAudio();
+    sfxStart();
+    lastPi = pointerIndex();
+    lastTick = 0;
+
+    var n = names.length, s = 360 / n;
+    var idx = randInt(n);
+    var jitter = (rand() - 0.5) * s * 0.7;
+    var targetMod = mod(-(idx * s + s / 2 + jitter), 360);
+    var cur = mod(rotation, 360);
+    var delta = targetMod - cur;
+    if (delta <= 0) delta += 360;
+    var spins = reduceMotion ? 1 : 6 + randInt(3);
+    var from = cur, to = cur + delta + 360 * spins;
+    var dur = reduceMotion ? 1500 : 6500;
+    var t0 = performance.now();
+
+    function frame(now) {
+      var t = Math.min(1, (now - t0) / dur);
+      var e = 1 - Math.pow(1 - t, 4);
+      rotation = from + (to - from) * e;
+      canvas.style.transform = 'rotate(' + rotation + 'deg)';
+      updateTicker();
+      var pi = pointerIndex();
+      if (pi !== lastPi) {
+        lastPi = pi;
+        if (now - lastTick > 45) { lastTick = now; sfxTick(); flick(); }
+      }
+      if (t < 1) requestAnimationFrame(frame);
+      else finish(idx);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function finish(idx) {
+    rotation = mod(rotation, 360);
+    canvas.style.transform = 'rotate(' + rotation + 'deg)';
+    updateTicker();
+    spinning = false;
+    $('spin').textContent = 'SPIN !';
+    $('spin').disabled = names.length === 0;
+    $('btn-import').disabled = false;
+    $('btn-sample').disabled = false;
+    $('btn-500').disabled = false;
+
+    winnerIdx = idx;
+    drawNo += 1;
+    history.push({ no: drawNo, name: names[idx] });
+    renderHistory();
+    sfxWin();
+    showResult(names[idx], idx);
+    if (!reduceMotion && window.confetti) {
+      var pal = ['#E5383B', '#F77F00', '#FFC300', '#1FA463', '#0E9FB5', '#3A6FF0', '#8E44EC', '#E8478B'];
+      window.confetti({ particleCount: 140, spread: 75, origin: { x: 0.5, y: 0.6 }, colors: pal, zIndex: 200 });
+      setTimeout(function () { window.confetti({ particleCount: 70, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors: pal, zIndex: 200 }); }, 250);
+      setTimeout(function () { window.confetti({ particleCount: 70, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors: pal, zIndex: 200 }); }, 400);
+    }
+  }
+
+  $('spin').addEventListener('click', spin);
+
+  /* ---------- result dialog ---------- */
+  function showResult(name, idx) {
+    $('res-name').textContent = name;
+    $('res-meta').textContent = 'รอบที่ ' + drawNo + ' · ลำดับที่ ' + (idx + 1) + ' จาก ' + names.length + ' คน';
+    $('result').hidden = false;
+    $('res-remove').focus();
+  }
+  function hideResult() { $('result').hidden = true; }
+
+  $('res-close').addEventListener('click', function () { hideResult(); $('spin').focus(); });
+  $('res-remove').addEventListener('click', function () {
+    if (winnerIdx >= 0 && winnerIdx < names.length) {
+      var next = names.slice();
+      next.splice(winnerIdx, 1);
+      winnerIdx = -1;
+      setNames(next, true);
+    }
+    hideResult();
+    $('spin').focus();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('result').hidden) { hideResult(); $('spin').focus(); }
+  });
+
+  /* ---------- winners history ---------- */
+  function renderHistory() {
+    var ol = $('history');
+    ol.innerHTML = '';
+    history.slice().reverse().forEach(function (h) {
+      var li = document.createElement('li');
+      var no = document.createElement('span'); no.className = 'no'; no.textContent = 'รอบ ' + h.no;
+      var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = h.name;
+      li.appendChild(no); li.appendChild(nm); ol.appendChild(li);
+    });
+    $('hcount').textContent = history.length;
+    $('hempty').hidden = history.length > 0;
+    $('btn-copy').disabled = history.length === 0;
+  }
+  $('btn-copy').addEventListener('click', function () {
+    var btn = $('btn-copy');
+    var text = history.map(function (h) { return h.no + '. ' + h.name; }).join('\n');
+    var ok = function () { btn.textContent = 'คัดลอกแล้ว'; setTimeout(function () { btn.textContent = 'คัดลอกรายชื่อผู้โชคดี'; }, 1600); };
+    var fail = function () {
+      var r = document.createRange(); r.selectNodeContents($('history'));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      btn.textContent = 'เลือกข้อความแล้ว กด Ctrl+C';
+      setTimeout(function () { btn.textContent = 'คัดลอกรายชื่อผู้โชคดี'; }, 2400);
+    };
+    try { navigator.clipboard.writeText(text).then(ok, fail); } catch (e) { fail(); }
+  });
+
+  /* ---------- logo ---------- */
+  var LOGO_KEY = 'lucky-wheel-logo';
+  function setLogo(src) {
+    var old = hub.querySelector('img');
+    if (old) old.remove();
+    if (src) {
+      $('hubtext').hidden = true;
+      var img = document.createElement('img');
+      img.alt = 'โลโก้';
+      img.src = src;
+      hub.appendChild(img);
+    } else {
+      $('hubtext').hidden = false;
+    }
+  }
+  try { var saved = localStorage.getItem(LOGO_KEY); if (saved) setLogo(saved); } catch (e) {}
+
+  $('btn-logo').addEventListener('click', function () { $('logo-file').click(); });
+  $('logo-file').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var im = new Image();
+      im.onload = function () {
+        var D = 320, cv = document.createElement('canvas');
+        cv.width = D; cv.height = D;
+        var x = cv.getContext('2d');
+        x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, D, D);
+        var sc = Math.min(D / im.width, D / im.height);
+        var w = im.width * sc, h = im.height * sc;
+        x.drawImage(im, (D - w) / 2, (D - h) / 2, w, h);
+        var url = cv.toDataURL('image/jpeg', 0.88);
+        setLogo(url);
+        try { localStorage.setItem(LOGO_KEY, url); } catch (err) {}
+      };
+      im.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+    e.target.value = '';
+  });
+  $('btn-logo-reset').addEventListener('click', function () {
+    setLogo(null);
+    try { localStorage.removeItem(LOGO_KEY); } catch (e) {}
+  });
+
+  /* ---------- init ---------- */
+  $('names-input').value = names.join('\n');
+  renderHistory();
+  computeSize();
+  draw();
+
+  if (window.ResizeObserver) new ResizeObserver(computeSize).observe($('fit'));
+  window.addEventListener('resize', computeSize);
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', draw);
+  }
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.load) {
+    Promise.all([
+      document.fonts.load('600 12px "Noto Sans Thai"'),
+      document.fonts.load('800 20px Kanit')
+    ]).then(draw, function () {});
+  }
+})();
+</script>
+</body>
+</html>
