@@ -1102,3 +1102,13 @@ textarea {
     if (mq.addEventListener) mq.addEventListener('change', draw);
   }
   new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.load) {
+    Promise.all([
+      document.fonts.load('600 12px "Noto Sans Thai"'),
+      document.fonts.load('800 20px Kanit')
+    ]).then(draw, function () {});
+  }
+})();
+</script>
+</body>
+</html>
