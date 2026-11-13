@@ -276,8 +276,6 @@ textarea {
         <p class="dirty" id="dirty" hidden>มีการแก้ไขที่ยังไม่ได้อัปเดตลงวงล้อ</p>
         <div class="row">
           <button class="btn primary" id="btn-import" type="button">อัปเดตรายชื่อลงวงล้อ</button>
-          <button class="btn" id="btn-sample" type="button">ตัวอย่าง 250 คน</button>
-          <button class="btn" id="btn-500" type="button">ผู้โชคดี 001–500</button>
         </div>
       </div>
 
@@ -510,16 +508,6 @@ textarea {
     if (spinning) return;
     setNames(parseNames($('names-input').value), false);
   });
-  $('btn-sample').addEventListener('click', function () {
-    if (spinning) return;
-    setNames(DEFAULT_NAMES.slice(), true);
-  });
-  $('btn-500').addEventListener('click', function () {
-    if (spinning) return;
-    var list = [];
-    for (var i = 1; i <= 500; i++) list.push('ผู้โชคดี ' + ('00' + i).slice(-3));
-    setNames(list, true);
-  });
 
   /* ---------- sound ---------- */
   var audio = { ctx: null, master: null, on: true };
@@ -623,8 +611,6 @@ textarea {
     $('spin').disabled = true;
     $('spin').textContent = 'กำลังสุ่ม...';
     $('btn-import').disabled = true;
-    $('btn-sample').disabled = true;
-    $('btn-500').disabled = true;
     $('qty').disabled = true;
     hideResult();
     ensureAudio();
@@ -676,8 +662,6 @@ textarea {
     $('spin').textContent = 'SPIN !';
     $('spin').disabled = names.length === 0;
     $('btn-import').disabled = false;
-    $('btn-sample').disabled = false;
-    $('btn-500').disabled = false;
     $('qty').disabled = false;
 
     winners = picks.slice();
