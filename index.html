@@ -9,9 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-/* Layout: wheel stage on the right, import + winners panel on the left; stacks with the wheel first on phones. */
+/* Layout: setup screen first (company, event, logo), then wheel stage on the right with import + winners panel on the left; stacks with the wheel first on phones. */
 :root {
   --bg: #EDF0F6;
   --surface: #FFFFFF;
@@ -27,7 +28,7 @@
   --rim: #1B2A44;
   --hub-bg: #FFFFFF;
   --hub-fg: #14284B;
-  --scrim: rgba(15, 26, 48, 0.55);
+  --scrim: rgba(15, 26, 48, 0.62);
   --shadow: 0 18px 44px rgba(15, 26, 48, 0.18);
   --font-display: 'Kanit', 'Noto Sans Thai', system-ui, sans-serif;
   --font-body: 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -46,7 +47,7 @@
     --danger: #F0647B;
     --ok: #3CCB98;
     --rim: #2A3957;
-    --scrim: rgba(3, 7, 15, 0.72);
+    --scrim: rgba(3, 7, 15, 0.74);
     --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
     color-scheme: dark;
   }
@@ -64,7 +65,7 @@
   --danger: #F0647B;
   --ok: #3CCB98;
   --rim: #2A3957;
-  --scrim: rgba(3, 7, 15, 0.72);
+  --scrim: rgba(3, 7, 15, 0.74);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 }
@@ -80,20 +81,22 @@ body {
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-button, textarea { font: inherit; color: inherit; }
+button, textarea, input, select { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 .app { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 
 .top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 16px; }
-.top h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 4.4vw, 40px); line-height: 1.15; text-wrap: balance; }
-.top p { margin: 2px 0 0; color: var(--muted); }
+.brand { min-width: 0; }
+.top h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 4.4vw, 40px); line-height: 1.15; text-wrap: balance; overflow-wrap: anywhere; }
+.top p { margin: 2px 0 0; color: var(--muted); overflow-wrap: anywhere; }
+.top-r { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .total { font-family: var(--font-display); font-weight: 500; color: var(--muted); }
 .total b { font-weight: 800; font-size: 1.5em; color: var(--fg); font-variant-numeric: tabular-nums; }
 
 .grid {
   display: grid;
-  grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
+  grid-template-columns: minmax(255px, 332px) minmax(0, 1fr);
   grid-template-areas: "panel stage";
   gap: 20px;
   align-items: start;
@@ -114,7 +117,7 @@ button, textarea { font: inherit; color: inherit; }
 }
 #fit { width: 100%; }
 .wheel { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; padding-top: 18px; }
-.disc { position: relative; border-radius: 50%; box-shadow: 0 14px 44px rgba(0, 0, 0, 0.38), 0 0 60px rgba(255, 195, 0, 0.18); }
+.disc { position: relative; border-radius: 50%; overflow: hidden; box-shadow: 0 14px 44px rgba(0, 0, 0, 0.38), 0 0 60px rgba(255, 195, 0, 0.18); }
 #cv { display: block; border-radius: 50%; will-change: transform; }
 .pointer {
   position: absolute; top: 0; left: 50%; transform: translateX(-50%); transform-origin: 50% 0; z-index: 3;
@@ -127,9 +130,30 @@ button, textarea { font: inherit; color: inherit; }
   border-radius: 50%; background: var(--hub-bg); border: 4px solid var(--rim);
   display: grid; place-items: center; overflow: hidden;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  color: var(--hub-fg); font-family: var(--font-display); font-weight: 800; text-align: center; line-height: 1.1;
+  color: var(--hub-fg); font-family: var(--font-display); font-weight: 800; text-align: center; line-height: 1.15;
 }
+.hub span { padding: 6px; overflow-wrap: anywhere; }
 .hub img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+
+/* Winner popup sits on the wheel itself */
+.result {
+  position: absolute; left: 0; right: 0; top: 18px; bottom: 0; z-index: 6;
+  display: grid; place-items: center; border-radius: 50%;
+  background: var(--scrim);
+}
+.result[hidden] { display: none; }
+.result-card {
+  width: min(calc(var(--ws, 560px) * 0.943), 644px);
+  background: var(--surface); border: 2px solid var(--accent); border-radius: 22px;
+  padding: clamp(12px, calc(var(--ws, 560px) * 0.04), 26px) clamp(12px, calc(var(--ws, 560px) * 0.035), 22px);
+  text-align: center; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.result-card .eyebrow { margin: 0; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; font-size: 14px; }
+.result-card .win { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(23px, calc(var(--ws, 560px) * 0.0863), 64px); line-height: 1.15; color: var(--accent); overflow-wrap: anywhere; text-wrap: balance; }
+.result-card .meta { margin: 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.result-card .row { justify-content: center; margin-top: 8px; }
+.result-card .btn { padding: 6px 10px; font-size: 11.5px; }
 
 .ticker {
   display: flex; align-items: baseline; justify-content: center; gap: 10px; flex-wrap: wrap;
@@ -150,7 +174,10 @@ button, textarea { font: inherit; color: inherit; }
 .spin:active:not(:disabled) { transform: translateY(1px); }
 .spin:disabled { opacity: 0.5; cursor: not-allowed; }
 .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; }
+.icon-btn { width: 52px; height: 52px; padding: 0; border-radius: 50%; display: grid; place-items: center; }
 .sound[aria-pressed="false"] { color: var(--muted); }
+.edit-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; }
+.rbtn { display: inline-flex; align-items: center; gap: 5px; }
 
 .panel-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px;
@@ -164,7 +191,7 @@ textarea {
   width: 100%; height: 200px; resize: vertical; padding: 10px 12px; font-size: 14px; line-height: 1.5;
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
 }
-.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .btn {
   border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 8px 14px;
   font-weight: 600; cursor: pointer; transition: filter .12s ease;
@@ -174,6 +201,15 @@ textarea {
 .btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); flex: 1 1 auto; }
 .btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
 .dirty { margin: 0; font-size: 13px; color: var(--danger); font-weight: 600; }
+.dup { margin: 0; font-size: 13px; color: var(--danger); }
+.linkbtn { background: none; border: 0; padding: 0; font-weight: 700; text-decoration: underline; cursor: pointer; }
+
+.imp-box { border: 1px dashed var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); }
+.imp-file { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.imp-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.imp-opts label { font-size: 14px; }
+.chk { display: flex; align-items: center; gap: 6px; }
+select { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); max-width: 100%; }
 
 .history { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
 .history li {
@@ -184,21 +220,26 @@ textarea {
 .history .nm { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
 .empty { margin: 0; color: var(--muted); font-size: 13.5px; }
 
-.result {
-  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
-  background: var(--scrim);
-  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+/* Setup screen */
+.setup { min-height: 70vh; display: grid; place-items: center; padding-block: 16px; }
+.setup-card {
+  width: min(100%, 520px); background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+  padding: 28px 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px;
 }
-.result[hidden] { display: none; }
-.result-card {
-  width: min(100%, 560px); background: var(--surface); border: 2px solid var(--accent); border-radius: 24px;
-  padding: 28px 22px 22px; text-align: center; box-shadow: var(--shadow);
-  display: flex; flex-direction: column; gap: 10px; align-items: center;
+.setup-mark {
+  width: 64px; height: 64px; border-radius: 50%; border: 5px solid var(--rim);
+  background: conic-gradient(#E5383B 0 12.5%, #F77F00 0 25%, #FFC300 0 37.5%, #1FA463 0 50%, #0E9FB5 0 62.5%, #3A6FF0 0 75%, #8E44EC 0 87.5%, #E8478B 0 100%);
 }
-.result-card .eyebrow { margin: 0; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
-.result-card .win { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(32px, 8vw, 60px); line-height: 1.15; color: var(--accent); overflow-wrap: anywhere; text-wrap: balance; }
-.result-card .meta { margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
-.result-card .row { justify-content: center; margin-top: 10px; }
+.setup-card h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(24px, 5vw, 32px); line-height: 1.2; }
+.setup-card label { font-weight: 600; font-size: 14px; }
+.field { width: 100%; padding: 11px 12px; font-size: 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
+.logo-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.logo-prev {
+  width: 88px; height: 88px; flex: none; border-radius: 50%; background: #FFFFFF; border: 3px solid var(--rim);
+  overflow: hidden; display: grid; place-items: center; color: #566178; font-size: 12px; text-align: center;
+}
+.logo-prev img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+.logo-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .spin, .btn { transition: none; }
@@ -207,13 +248,44 @@ textarea {
 </head>
 <body>
 
-<div class="app">
-  <header class="top">
-    <div>
-      <h1>วงล้อผู้โชคดี</h1>
-      <p>ราชธานี ลิสซิ่ง · วางรายชื่อ แล้วกด SPIN เพื่อจับรางวัล</p>
+<section class="setup" id="setup" hidden>
+  <form class="setup-card" id="setup-form" autocomplete="off">
+    <div class="setup-mark" aria-hidden="true"></div>
+    <h1>ตั้งค่างานจับรางวัล</h1>
+    <p class="hint">กรอกข้อมูลก่อนเริ่มใช้งาน ชื่อจะแสดงที่หัวหน้าจอ โลโก้จะอยู่กลางวงล้อ และบันทึกไว้ในเบราว์เซอร์เครื่องนี้</p>
+    <label for="su-company">ชื่อบริษัท</label>
+    <input class="field" id="su-company" type="text" maxlength="60" required placeholder="เช่น ราชธานี ลิสซิ่ง">
+    <label for="su-event">ชื่องาน</label>
+    <input class="field" id="su-event" type="text" maxlength="80" required placeholder="เช่น งานเลี้ยงสังสรรค์ประจำปี">
+    <label>โลโก้บริษัท (ไม่บังคับ)</label>
+    <div class="logo-pick">
+      <div class="logo-prev" id="su-prev"><span>ไม่มีโลโก้</span></div>
+      <div class="logo-side">
+        <div class="row">
+          <button class="btn" id="su-logo-btn" type="button">เลือกไฟล์โลโก้</button>
+          <button class="btn" id="su-logo-clear" type="button">ลบโลโก้</button>
+        </div>
+        <p class="hint">ไฟล์ภาพ PNG หรือ JPG</p>
+      </div>
     </div>
-    <div class="total"><b id="total">250</b> คนในวงล้อ</div>
+    <input id="su-logo-file" type="file" accept="image/*" hidden>
+    <div class="row">
+      <button class="btn primary" id="su-save" type="submit">บันทึกและเริ่มใช้งาน</button>
+      <button class="btn" id="su-cancel" type="button" hidden>ยกเลิก</button>
+    </div>
+  </form>
+</section>
+
+<div class="app" id="app" hidden>
+  <header class="top">
+    <div class="brand">
+      <h1 id="ev-title"></h1>
+      <p id="co-title"></p>
+    </div>
+    <div class="top-r">
+      <div class="total"><b id="total">250</b> คนในวงล้อ</div>
+      <button class="btn edit-btn" id="btn-edit-setup" type="button" aria-label="แก้ไขชื่องานและโลโก้" title="แก้ไขชื่องานและโลโก้"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Edit</button>
+    </div>
   </header>
 
   <main class="grid">
@@ -224,7 +296,18 @@ textarea {
             <div class="pointer" aria-hidden="true"></div>
             <div class="disc" id="disc">
               <canvas id="cv" role="img" aria-label="วงล้อรายชื่อผู้เข้าร่วม"></canvas>
-              <div class="hub" id="hub"><span id="hubtext">ราชธานี<br>ลิสซิ่ง</span></div>
+              <div class="hub" id="hub"><span id="hubtext"></span></div>
+            </div>
+            <div class="result" id="result" hidden role="dialog" aria-modal="true" aria-labelledby="res-name">
+              <div class="result-card">
+                <p class="eyebrow">ผู้โชคดีคือ</p>
+                <p class="win" id="res-name"></p>
+                <p class="meta" id="res-meta"></p>
+                <div class="row">
+                  <button class="btn danger rbtn" id="res-remove" type="button" aria-label="ตัดชื่อออกจากวงล้อ"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>ตัดชื่อออก</button>
+                  <button class="btn rbtn" id="res-close" type="button" aria-label="เก็บชื่อไว้และปิด"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>เก็บชื่อ</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -232,7 +315,10 @@ textarea {
         <p class="hint" id="labelnote" hidden style="margin:0;text-align:center">รายชื่อเยอะเกินกว่าจะแสดงบนวงล้อได้ ดูชื่อที่ตัวชี้ได้จากแถบด้านบน</p>
         <div class="controls">
           <button class="spin" id="spin" type="button">SPIN !</button>
-          <button class="btn sound" id="btn-sound" type="button" aria-pressed="true">เสียง: เปิด</button>
+          <button class="btn icon-btn sound" id="btn-sound" type="button" aria-pressed="true" aria-label="ปิดเสียง" title="ปิดเสียง">
+            <svg id="ico-on" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            <svg id="ico-off" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M11 5 6 9H3v6h3l5 4V5z" fill="currentColor"/><path d="M16 9l6 6"/><path d="M22 9l-6 6"/></svg>
+          </button>
         </div>
       </div>
     </section>
@@ -240,13 +326,28 @@ textarea {
     <aside class="panel">
       <div class="panel-card">
         <h2>นำเข้ารายชื่อ <span class="pill" id="count">250 คน</span></h2>
-        <p class="hint">พิมพ์หรือวางรายชื่อ บรรทัดละ 1 คน ตอนนี้เป็นรายชื่อตัวอย่าง 250 คน</p>
+        <p class="hint">คัดลอกรายชื่อจาก Excel มาวางในกล่องนี้ (Ctrl+V) ระบบอัปเดตวงล้อให้ทันที หรือกดอัปโหลดไฟล์ Excel/CSV</p>
         <textarea id="names-input" spellcheck="false" aria-label="รายชื่อผู้เข้าร่วม บรรทัดละ 1 คน"></textarea>
         <p class="dirty" id="dirty" hidden>มีการแก้ไขที่ยังไม่ได้อัปเดตลงวงล้อ</p>
+        <p class="dup" id="dupnote" hidden><span id="dupcount"></span> <button class="linkbtn" id="btn-dedupe" type="button">ลบชื่อซ้ำ</button></p>
         <div class="row">
           <button class="btn primary" id="btn-import" type="button">อัปเดตรายชื่อลงวงล้อ</button>
-          <button class="btn" id="btn-sample" type="button">ตัวอย่าง 250 คน</button>
-          <button class="btn" id="btn-500" type="button">ผู้โชคดี 001–500</button>
+          <button class="btn" id="btn-file" type="button">อัปโหลดไฟล์ Excel/CSV</button>
+        </div>
+        <input id="imp-file" type="file" accept=".xlsx,.xls,.csv,.txt,text/csv,text/plain" hidden>
+        <p class="dirty" id="imp-err" hidden></p>
+        <div class="imp-box" id="imp-box" hidden>
+          <p class="imp-file" id="imp-name"></p>
+          <div class="imp-opts">
+            <label for="imp-col">คอลัมน์ที่เป็นชื่อ</label>
+            <select id="imp-col"></select>
+            <label class="chk"><input type="checkbox" id="imp-header"> แถวแรกเป็นหัวตาราง</label>
+          </div>
+          <p class="hint" id="imp-preview"></p>
+          <div class="row">
+            <button class="btn primary" id="imp-go" type="button">นำเข้าลงวงล้อ</button>
+            <button class="btn" id="imp-cancel" type="button">ยกเลิก</button>
+          </div>
         </div>
       </div>
 
@@ -256,30 +357,8 @@ textarea {
         <p class="empty" id="hempty">ยังไม่มีผู้โชคดี กด SPIN เพื่อเริ่มสุ่มรอบแรก</p>
         <div class="row"><button class="btn" id="btn-copy" type="button" disabled>คัดลอกรายชื่อผู้โชคดี</button></div>
       </div>
-
-      <div class="panel-card">
-        <h2>โลโก้กลางวงล้อ</h2>
-        <p class="hint">เลือกไฟล์ภาพโลโก้จากเครื่อง ระบบจะจำไว้ในเบราว์เซอร์นี้</p>
-        <div class="row">
-          <button class="btn" id="btn-logo" type="button">เลือกไฟล์โลโก้</button>
-          <button class="btn" id="btn-logo-reset" type="button">ใช้ข้อความแทน</button>
-        </div>
-        <input id="logo-file" type="file" accept="image/*" hidden>
-      </div>
     </aside>
   </main>
-</div>
-
-<div class="result" id="result" hidden role="dialog" aria-modal="true" aria-labelledby="res-name">
-  <div class="result-card">
-    <p class="eyebrow">ผู้โชคดีคือ</p>
-    <p class="win" id="res-name"></p>
-    <p class="meta" id="res-meta"></p>
-    <div class="row">
-      <button class="btn danger" id="res-remove" type="button">ตัดชื่อออกจากวงล้อ</button>
-      <button class="btn" id="res-close" type="button">เก็บชื่อไว้และปิด</button>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -287,12 +366,13 @@ textarea {
   'use strict';
 
   var COLORS = ['#E5383B', '#F77F00', '#FFC300', '#1FA463', '#0E9FB5', '#3A6FF0', '#8E44EC', '#E8478B'];
+  var BASE = -Math.PI / 2;
   var DEFAULT_NAMES = [];
   for (var k = 1; k <= 250; k++) DEFAULT_NAMES.push('ผู้โชคดี ' + k);
 
   var $ = function (id) { return document.getElementById(id); };
-  var canvas = $('cv'), hub = $('hub'), disc = $('disc');
-  var names = DEFAULT_NAMES.slice();
+  var canvas = $('cv'), hub = $('hub'), disc = $('disc'), wheelEl = $('wheel'), pointerEl = document.querySelector('.pointer');
+  var names = [];
   var rotation = 0, spinning = false, size = 560;
   var winnerIdx = -1, drawNo = 0, history = [];
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -303,7 +383,9 @@ textarea {
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
   function parseNames(text) {
-    return text.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(function (s) { return s !== ''; });
+    return text.split(/\r?\n/).map(function (s) {
+      return s.split('\t')[0].trim().replace(/^"(.*)"$/, '$1').trim();
+    }).filter(function (s) { return s !== ''; });
   }
 
   /* ---------- wheel drawing ---------- */
@@ -315,6 +397,12 @@ textarea {
   function inkFor(hex) {
     var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
     return (0.299 * r + 0.587 * g + 0.114 * b) > 140 ? '#1A1300' : '#FFFFFF';
+  }
+  function fit(ctx, text, maxW) {
+    if (ctx.measureText(text).width <= maxW) return text;
+    var t = text;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
   }
 
   function draw() {
@@ -342,11 +430,10 @@ textarea {
       ctx.fillText('ยังไม่มีรายชื่อ', c, c + hubR + S * 0.06);
     } else {
       var s = Math.PI * 2 / n;
-      var base = -Math.PI / 2;
       for (var i = 0; i < n; i++) {
         ctx.beginPath();
         ctx.moveTo(c, c);
-        ctx.arc(c, c, R, base + s * i, base + s * (i + 1) + (n > 1 ? 0.003 : 0));
+        ctx.arc(c, c, R, BASE + s * i, BASE + s * (i + 1) + (n > 1 ? 0.003 : 0));
         ctx.closePath();
         ctx.fillStyle = sliceColor(i, n);
         ctx.fill();
@@ -355,7 +442,7 @@ textarea {
         ctx.strokeStyle = 'rgba(255,255,255,0.35)';
         ctx.lineWidth = 1;
         for (var j = 0; j < n; j++) {
-          var a = base + s * j;
+          var a = BASE + s * j;
           ctx.beginPath();
           ctx.moveTo(c + Math.cos(a) * hubR, c + Math.sin(a) * hubR);
           ctx.lineTo(c + Math.cos(a) * R, c + Math.sin(a) * R);
@@ -379,7 +466,7 @@ textarea {
       for (var m = 0; showLabels && m < n; m++) {
         ctx.save();
         ctx.translate(c, c);
-        ctx.rotate(base + s * (m + 0.5));
+        ctx.rotate(BASE + s * (m + 0.5));
         ctx.fillStyle = inkFor(sliceColor(m, n));
         ctx.fillText(fit(ctx, names[m], maxW), R - 10, 0);
         ctx.restore();
@@ -391,7 +478,7 @@ textarea {
 
     var bulbs = 40, br = rim * 0.27;
     for (var q = 0; q < bulbs; q++) {
-      var ba = base0() + q * Math.PI * 2 / bulbs;
+      var ba = BASE + q * Math.PI * 2 / bulbs;
       ctx.beginPath();
       ctx.arc(c + Math.cos(ba) * (R + rim / 2), c + Math.sin(ba) * (R + rim / 2), br, 0, Math.PI * 2);
       ctx.shadowColor = q % 2 ? '#FFFFFF' : '#FFC300';
@@ -407,17 +494,9 @@ textarea {
     hub.style.fontSize = Math.max(10, Math.round(S * 0.026)) + 'px';
     disc.style.width = S + 'px';
     disc.style.height = S + 'px';
+    wheelEl.style.setProperty('--ws', S + 'px');
     canvas.style.transform = 'rotate(' + rotation + 'deg)';
     updateTicker();
-  }
-
-  function base0() { return -Math.PI / 2; }
-
-  function fit(ctx, text, maxW) {
-    if (ctx.measureText(text).width <= maxW) return text;
-    var t = text;
-    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
-    return t + '…';
   }
 
   function pointerIndex() {
@@ -440,6 +519,15 @@ textarea {
   }
 
   /* ---------- names + panel ---------- */
+  function updateDup() {
+    var seen = Object.create(null), d = 0;
+    for (var i = 0; i < names.length; i++) {
+      if (seen[names[i]]) d++; else seen[names[i]] = 1;
+    }
+    $('dupnote').hidden = d === 0;
+    $('dupcount').textContent = 'พบชื่อซ้ำ ' + d + ' รายการ ชื่อซ้ำมีโอกาสถูกสุ่มมากขึ้น';
+  }
+
   function setNames(list, syncTextarea) {
     names = list;
     if (syncTextarea) $('names-input').value = names.join('\n');
@@ -447,6 +535,7 @@ textarea {
     $('total').textContent = names.length;
     $('spin').disabled = spinning || names.length === 0;
     $('dirty').hidden = true;
+    updateDup();
     draw();
   }
 
@@ -457,32 +546,165 @@ textarea {
   }
 
   $('names-input').addEventListener('input', checkDirty);
+  $('names-input').addEventListener('paste', function () {
+    setTimeout(function () {
+      if (!spinning) setNames(parseNames($('names-input').value), true);
+    }, 0);
+  });
   $('btn-import').addEventListener('click', function () {
     if (spinning) return;
     setNames(parseNames($('names-input').value), false);
   });
-  $('btn-sample').addEventListener('click', function () {
+  $('btn-dedupe').addEventListener('click', function () {
     if (spinning) return;
-    setNames(DEFAULT_NAMES.slice(), true);
+    var seen = Object.create(null);
+    setNames(names.filter(function (n) { if (seen[n]) return false; seen[n] = 1; return true; }), true);
   });
-  $('btn-500').addEventListener('click', function () {
+
+  /* ---------- Excel / CSV import ---------- */
+  var imp = { rows: [], cols: 0 };
+
+  function letters(i) {
+    var s = '';
+    i += 1;
+    while (i > 0) { var r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); }
+    return s;
+  }
+  function impError(msg) {
+    $('imp-box').hidden = true;
+    $('imp-err').textContent = msg;
+    $('imp-err').hidden = false;
+  }
+  function parseCSV(text) {
+    text = text.replace(/^﻿/, '');
+    var first = text.split(/\r?\n/)[0] || '';
+    var counts = { ',': 0, '\t': 0, ';': 0 };
+    for (var i = 0; i < first.length; i++) if (counts.hasOwnProperty(first[i])) counts[first[i]]++;
+    var delim = ',';
+    if (counts['\t'] > counts[delim]) delim = '\t';
+    if (counts[';'] > counts[delim]) delim = ';';
+    var rows = [], row = [], cell = '', q = false;
+    for (var p = 0; p < text.length; p++) {
+      var ch = text[p];
+      if (q) {
+        if (ch === '"') { if (text[p + 1] === '"') { cell += '"'; p++; } else q = false; }
+        else cell += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === delim) { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[p + 1] === '\n') p++;
+        row.push(cell); cell = ''; rows.push(row); row = [];
+      } else cell += ch;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+  function decodeText(buf) {
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) {}
+    try { return new TextDecoder('windows-874').decode(buf); } catch (e2) {}
+    return new TextDecoder('utf-8').decode(buf);
+  }
+  function cleanRows(rows) {
+    return rows.map(function (r) { return r.map(function (v) { return v == null ? '' : String(v).trim(); }); })
+      .filter(function (r) { return r.some(function (v) { return v !== ''; }); });
+  }
+
+  function openImport(fileName, rows) {
+    rows = cleanRows(rows);
+    if (!rows.length) { impError('ไม่พบข้อมูลในไฟล์นี้'); return; }
+    imp.rows = rows;
+    var cols = 0;
+    rows.forEach(function (r) { if (r.length > cols) cols = r.length; });
+    imp.cols = cols;
+    var head = rows[0];
+    var hdrRe = /ชื่อ|name|รายชื่อ|ลำดับ|รหัส|เลขที่|\bid\b|no\./i;
+    var sel = $('imp-col');
+    sel.innerHTML = '';
+    var pick = 0, found = false;
+    for (var c = 0; c < cols; c++) {
+      var o = document.createElement('option');
+      o.value = c;
+      var h = head[c] || '';
+      o.textContent = 'คอลัมน์ ' + letters(c) + (h ? ' · ' + (h.length > 18 ? h.slice(0, 18) + '…' : h) : '');
+      sel.appendChild(o);
+      if (!found && /ชื่อ|name/i.test(h)) { pick = c; found = true; }
+    }
+    sel.value = pick;
+    $('imp-header').checked = hdrRe.test(head.join(' '));
+    $('imp-name').textContent = fileName + ' · ' + rows.length + ' แถว';
+    $('imp-err').hidden = true;
+    $('imp-box').hidden = false;
+    impPreview();
+  }
+  function impList() {
+    var c = +$('imp-col').value, start = $('imp-header').checked ? 1 : 0, out = [];
+    for (var i = start; i < imp.rows.length; i++) {
+      var v = imp.rows[i][c];
+      if (v) out.push(v);
+    }
+    return out;
+  }
+  function impPreview() {
+    var l = impList();
+    $('imp-preview').textContent = l.length ? 'พบ ' + l.length + ' ชื่อ เช่น ' + l.slice(0, 3).join(', ') : 'ไม่พบชื่อในคอลัมน์นี้';
+    $('imp-go').disabled = !l.length;
+    $('imp-go').textContent = 'นำเข้า ' + l.length + ' ชื่อลงวงล้อ';
+  }
+
+  $('btn-file').addEventListener('click', function () { if (!spinning) $('imp-file').click(); });
+  $('imp-col').addEventListener('change', impPreview);
+  $('imp-header').addEventListener('change', impPreview);
+  $('imp-cancel').addEventListener('click', function () { $('imp-box').hidden = true; });
+  $('imp-go').addEventListener('click', function () {
     if (spinning) return;
-    var list = [];
-    for (var i = 1; i <= 500; i++) list.push('ผู้โชคดี ' + ('00' + i).slice(-3));
-    setNames(list, true);
+    setNames(impList(), true);
+    $('imp-box').hidden = true;
+  });
+  $('imp-file').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    var ext = (f.name.split('.').pop() || '').toLowerCase();
+    var reader = new FileReader();
+    reader.onerror = function () { impError('อ่านไฟล์ไม่ได้ ลองบันทึกไฟล์ใหม่แล้วเลือกอีกครั้ง'); };
+    reader.onload = function () {
+      try {
+        var rows;
+        if (ext === 'xlsx' || ext === 'xls') {
+          if (!window.XLSX) { impError('ยังโหลดตัวอ่านไฟล์ Excel ไม่สำเร็จ รอสักครู่แล้วลองใหม่ หรือบันทึกเป็น CSV แล้วอัปโหลดแทน'); return; }
+          var wb = window.XLSX.read(reader.result, { type: 'array' });
+          var ws = wb.Sheets[wb.SheetNames[0]];
+          rows = window.XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '', blankrows: false });
+        } else if (ext === 'csv') {
+          rows = parseCSV(decodeText(reader.result));
+        } else if (ext === 'txt') {
+          rows = decodeText(reader.result).replace(/^﻿/, '').split(/\r?\n/).map(function (l) { return [l]; });
+        } else {
+          impError('รองรับเฉพาะไฟล์ .xlsx .xls .csv และ .txt');
+          return;
+        }
+        openImport(f.name, rows);
+      } catch (err) {
+        impError('อ่านไฟล์ไม่สำเร็จ ตรวจว่าเป็นไฟล์ Excel หรือ CSV ที่ไม่เสียหาย');
+      }
+    };
+    reader.readAsArrayBuffer(f);
   });
 
   /* ---------- sound ---------- */
   var audio = { ctx: null, master: null, on: true };
   var SOUND_KEY = 'lucky-wheel-sound';
   var lastPi = -1, lastTick = 0;
-  var pointerEl = document.querySelector('.pointer');
   try { if (localStorage.getItem(SOUND_KEY) === 'off') audio.on = false; } catch (e) {}
 
   function paintSound() {
     var b = $('btn-sound');
     b.setAttribute('aria-pressed', audio.on ? 'true' : 'false');
-    b.textContent = audio.on ? 'เสียง: เปิด' : 'เสียง: ปิด';
+    var label = audio.on ? 'ปิดเสียง' : 'เปิดเสียง';
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    $('ico-on').hidden = !audio.on;
+    $('ico-off').hidden = audio.on;
   }
   function ensureAudio() {
     if (!audio.on) return null;
@@ -550,6 +772,28 @@ textarea {
     g.gain.linearRampToValueAtTime(0.0001, t + 1.65);
     n.connect(f); f.connect(g); g.connect(audio.master);
     n.start(t); n.stop(t + 1.7);
+    /* extra celebration layers on top of the original fanfare */
+    blip(120, 0, 0.4, 'sine', 0.34, 45);
+    var cr = noiseSrc(c, 1.3), hp = c.createBiquadFilter(), cg = c.createGain(), t0 = c.currentTime;
+    hp.type = 'highpass'; hp.frequency.value = 6000;
+    cg.gain.setValueAtTime(0.0001, t0);
+    cg.gain.exponentialRampToValueAtTime(0.2, t0 + 0.02);
+    cg.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.2);
+    cr.connect(hp); hp.connect(cg); cg.connect(audio.master);
+    cr.start(t0); cr.stop(t0 + 1.3);
+    blip(500, 0.05, 0.55, 'sine', 0.09, 2600);
+    [784, 988, 1175, 1568].forEach(function (fq, j) { blip(fq, 0.5 + j * 0.1, 0.16, 'square', 0.05); });
+    blip(1568, 0.9, 0.5, 'square', 0.06);
+    var ch = noiseSrc(c, 2.2), cf = c.createBiquadFilter(), cgn = c.createGain();
+    cf.type = 'bandpass'; cf.Q.value = 1.4;
+    cf.frequency.setValueAtTime(700, t0 + 0.4);
+    cf.frequency.exponentialRampToValueAtTime(1700, t0 + 1.2);
+    cgn.gain.setValueAtTime(0.0001, t0 + 0.4);
+    cgn.gain.exponentialRampToValueAtTime(0.16, t0 + 0.9);
+    cgn.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.4);
+    ch.connect(cf); cf.connect(cgn); cgn.connect(audio.master);
+    ch.start(t0 + 0.4); ch.stop(t0 + 2.6);
+    for (var s2 = 0; s2 < 8; s2++) blip(2400 + Math.random() * 2400, 1.1 + s2 * 0.1, 0.16, 'sine', 0.045);
   }
   function flick() {
     if (reduceMotion || !pointerEl || !pointerEl.animate) return;
@@ -559,7 +803,6 @@ textarea {
       { transform: 'translateX(-50%) rotate(0deg)' }
     ], { duration: 90 });
   }
-  paintSound();
   $('btn-sound').addEventListener('click', function () {
     audio.on = !audio.on;
     try { localStorage.setItem(SOUND_KEY, audio.on ? 'on' : 'off'); } catch (e) {}
@@ -568,14 +811,19 @@ textarea {
   });
 
   /* ---------- spin ---------- */
+  function setBusy(b) {
+    $('btn-import').disabled = b;
+    $('btn-file').disabled = b;
+    $('btn-edit-setup').disabled = b;
+  }
+
   function spin() {
     if (spinning || !names.length) return;
     spinning = true;
     $('spin').disabled = true;
     $('spin').textContent = 'กำลังสุ่ม...';
-    $('btn-import').disabled = true;
-    $('btn-sample').disabled = true;
-    $('btn-500').disabled = true;
+    setBusy(true);
+    $('imp-box').hidden = true;
     hideResult();
     ensureAudio();
     sfxStart();
@@ -618,9 +866,7 @@ textarea {
     spinning = false;
     $('spin').textContent = 'SPIN !';
     $('spin').disabled = names.length === 0;
-    $('btn-import').disabled = false;
-    $('btn-sample').disabled = false;
-    $('btn-500').disabled = false;
+    setBusy(false);
 
     winnerIdx = idx;
     drawNo += 1;
@@ -629,25 +875,27 @@ textarea {
     sfxWin();
     showResult(names[idx], idx);
     if (!reduceMotion && window.confetti) {
-      var pal = ['#E5383B', '#F77F00', '#FFC300', '#1FA463', '#0E9FB5', '#3A6FF0', '#8E44EC', '#E8478B'];
-      window.confetti({ particleCount: 140, spread: 75, origin: { x: 0.5, y: 0.6 }, colors: pal, zIndex: 200 });
-      setTimeout(function () { window.confetti({ particleCount: 70, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors: pal, zIndex: 200 }); }, 250);
-      setTimeout(function () { window.confetti({ particleCount: 70, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors: pal, zIndex: 200 }); }, 400);
+      var rc = wheelEl.getBoundingClientRect();
+      var ox = Math.min(0.95, Math.max(0.05, (rc.left + rc.width / 2) / window.innerWidth));
+      var oy = Math.min(0.95, Math.max(0.05, (rc.top + rc.height / 2) / window.innerHeight));
+      window.confetti({ particleCount: 140, spread: 75, origin: { x: ox, y: oy }, colors: COLORS, zIndex: 200 });
+      setTimeout(function () { window.confetti({ particleCount: 70, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors: COLORS, zIndex: 200 }); }, 250);
+      setTimeout(function () { window.confetti({ particleCount: 70, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors: COLORS, zIndex: 200 }); }, 400);
     }
   }
 
   $('spin').addEventListener('click', spin);
 
-  /* ---------- result dialog ---------- */
+  /* ---------- result popup (on the wheel) ---------- */
   function showResult(name, idx) {
     $('res-name').textContent = name;
     $('res-meta').textContent = 'รอบที่ ' + drawNo + ' · ลำดับที่ ' + (idx + 1) + ' จาก ' + names.length + ' คน';
     $('result').hidden = false;
-    $('res-remove').focus();
+    try { $('res-remove').focus({ preventScroll: true }); } catch (e) {}
   }
   function hideResult() { $('result').hidden = true; }
 
-  $('res-close').addEventListener('click', function () { hideResult(); $('spin').focus(); });
+  $('res-close').addEventListener('click', function () { hideResult(); $('spin').focus({ preventScroll: true }); });
   $('res-remove').addEventListener('click', function () {
     if (winnerIdx >= 0 && winnerIdx < names.length) {
       var next = names.slice();
@@ -656,10 +904,10 @@ textarea {
       setNames(next, true);
     }
     hideResult();
-    $('spin').focus();
+    $('spin').focus({ preventScroll: true });
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !$('result').hidden) { hideResult(); $('spin').focus(); }
+    if (e.key === 'Escape' && !$('result').hidden) { hideResult(); $('spin').focus({ preventScroll: true }); }
   });
 
   /* ---------- winners history ---------- */
@@ -689,26 +937,85 @@ textarea {
     try { navigator.clipboard.writeText(text).then(ok, fail); } catch (e) { fail(); }
   });
 
-  /* ---------- logo ---------- */
-  var LOGO_KEY = 'lucky-wheel-logo';
+  /* ---------- setup: company, event, logo ---------- */
+  var SETUP_KEY = 'lucky-wheel-setup';
+  var OLD_LOGO_KEY = 'lucky-wheel-logo';
+  var setup = { company: '', event: '', logo: '' };
+  var hasSetup = false, draftLogo = '';
+
+  function loadSetup() {
+    try {
+      var s = JSON.parse(localStorage.getItem(SETUP_KEY) || 'null');
+      if (s && s.company && s.event) {
+        setup = { company: String(s.company), event: String(s.event), logo: s.logo ? String(s.logo) : '' };
+        hasSetup = true;
+        return;
+      }
+    } catch (e) {}
+    try { var old = localStorage.getItem(OLD_LOGO_KEY); if (old) setup.logo = old; } catch (e2) {}
+  }
+  function saveSetup() {
+    try { localStorage.setItem(SETUP_KEY, JSON.stringify(setup)); } catch (e) {}
+  }
+
   function setLogo(src) {
     var old = hub.querySelector('img');
     if (old) old.remove();
     if (src) {
       $('hubtext').hidden = true;
       var img = document.createElement('img');
-      img.alt = 'โลโก้';
+      img.alt = 'โลโก้ ' + setup.company;
       img.src = src;
       hub.appendChild(img);
     } else {
       $('hubtext').hidden = false;
     }
   }
-  try { var saved = localStorage.getItem(LOGO_KEY); if (saved) setLogo(saved); } catch (e) {}
+  function applySetup() {
+    $('ev-title').textContent = setup.event;
+    $('co-title').textContent = setup.company;
+    $('hubtext').textContent = setup.company;
+    setLogo(setup.logo);
+  }
+  function paintPreview() {
+    var box = $('su-prev');
+    box.innerHTML = '';
+    if (draftLogo) {
+      var img = document.createElement('img');
+      img.alt = 'ตัวอย่างโลโก้';
+      img.src = draftLogo;
+      box.appendChild(img);
+    } else {
+      var sp = document.createElement('span');
+      sp.textContent = 'ไม่มีโลโก้';
+      box.appendChild(sp);
+    }
+  }
+  function showSetup() {
+    $('app').hidden = true;
+    $('setup').hidden = false;
+    $('su-company').value = setup.company;
+    $('su-event').value = setup.event;
+    draftLogo = setup.logo;
+    paintPreview();
+    $('su-cancel').hidden = !hasSetup;
+    $('su-save').textContent = hasSetup ? 'บันทึก' : 'บันทึกและเริ่มใช้งาน';
+    window.scrollTo(0, 0);
+    try { (setup.company ? $('su-event') : $('su-company')).focus({ preventScroll: true }); } catch (e) {}
+  }
+  function showApp() {
+    $('setup').hidden = true;
+    $('app').hidden = false;
+    applySetup();
+    computeSize();
+    draw();
+  }
 
-  $('btn-logo').addEventListener('click', function () { $('logo-file').click(); });
-  $('logo-file').addEventListener('change', function (e) {
+  $('su-logo-btn').addEventListener('click', function () { $('su-logo-file').click(); });
+  $('su-logo-clear').addEventListener('click', function () { draftLogo = ''; paintPreview(); });
+  $('su-logo-file').addEventListener('change', function (e) {
     var f = e.target.files && e.target.files[0];
+    e.target.value = '';
     if (!f) return;
     var reader = new FileReader();
     reader.onload = function () {
@@ -721,25 +1028,31 @@ textarea {
         var sc = Math.min(D / im.width, D / im.height);
         var w = im.width * sc, h = im.height * sc;
         x.drawImage(im, (D - w) / 2, (D - h) / 2, w, h);
-        var url = cv.toDataURL('image/jpeg', 0.88);
-        setLogo(url);
-        try { localStorage.setItem(LOGO_KEY, url); } catch (err) {}
+        draftLogo = cv.toDataURL('image/jpeg', 0.88);
+        paintPreview();
       };
       im.src = reader.result;
     };
     reader.readAsDataURL(f);
-    e.target.value = '';
   });
-  $('btn-logo-reset').addEventListener('click', function () {
-    setLogo(null);
-    try { localStorage.removeItem(LOGO_KEY); } catch (e) {}
+  $('setup-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var company = $('su-company').value.trim(), event = $('su-event').value.trim();
+    if (!company || !event) return;
+    setup = { company: company, event: event, logo: draftLogo };
+    hasSetup = true;
+    saveSetup();
+    showApp();
   });
+  $('su-cancel').addEventListener('click', function () { if (hasSetup) showApp(); });
+  $('btn-edit-setup').addEventListener('click', function () { if (!spinning) showSetup(); });
 
   /* ---------- init ---------- */
-  $('names-input').value = names.join('\n');
+  setNames(DEFAULT_NAMES.slice(), true);
   renderHistory();
-  computeSize();
-  draw();
+  paintSound();
+  loadSetup();
+  if (hasSetup) showApp(); else showSetup();
 
   if (window.ResizeObserver) new ResizeObserver(computeSize).observe($('fit'));
   window.addEventListener('resize', computeSize);
