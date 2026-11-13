@@ -293,6 +293,33 @@ textarea {
 @keyframes resPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes resFade { from { opacity: 0; } to { opacity: 1; } }
 
+.setup-card {
+  width: min(100%, 620px); max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 32px 30px 28px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; animation: resPop .35s ease;
+}
+.setup-icon {
+  width: 76px; height: 76px; border-radius: 50%; border: 5px solid var(--rim);
+  background: conic-gradient(#E5383B 0 45deg, #F77F00 0 90deg, #FFC300 0 135deg, #1FA463 0 180deg, #0E9FB5 0 225deg, #3A6FF0 0 270deg, #8E44EC 0 315deg, #E8478B 0 360deg);
+}
+.setup-card h3 { margin: 4px 0 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 5vw, 34px); line-height: 1.2; }
+.setup-card .hint { font-size: 14px; }
+.setup-card label.f { display: flex; flex-direction: column; gap: 8px; font-weight: 700; font-size: 15px; margin-top: 4px; }
+.setup-card input[type="text"] {
+  font: inherit; font-size: 16px; color: var(--fg); background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 13px 16px;
+}
+.setup-card input[type="text"]:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.logo-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.logo-pv {
+  width: 104px; height: 104px; border-radius: 50%; background: #fff; border: 4px solid var(--rim); overflow: hidden;
+  display: grid; place-items: center; color: #8A93A6; font-size: 12px; flex: 0 0 auto;
+}
+.logo-pv img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+.setup-card .actions { display: flex; gap: 10px; margin-top: 8px; }
+.setup-card .actions .btn { padding: 12px 18px; }
+.set-err { margin: 0; color: var(--danger); font-weight: 600; font-size: 13.5px; }
+
 @media (prefers-reduced-motion: reduce) {
   .spin, .btn { transition: none; }
 }
@@ -303,8 +330,8 @@ textarea {
 <div class="app">
   <header class="top">
     <div>
-      <h1>วงล้อผู้โชคดี</h1>
-      <p>ราชธานี ลิสซิ่ง · วางรายชื่อ แล้วกด SPIN เพื่อจับรางวัล</p>
+      <h1 id="title-h1">วงล้อผู้โชคดี</h1>
+      <p id="title-sub">ราชธานี ลิสซิ่ง · วางรายชื่อ แล้วกด SPIN เพื่อจับรางวัล</p>
     </div>
     <div class="total"><b id="total">250</b> คนในวงล้อ</div>
   </header>
@@ -374,16 +401,39 @@ textarea {
       </div>
 
       <div class="panel-card">
-        <h2>โลโก้กลางวงล้อ</h2>
-        <p class="hint">เลือกไฟล์ภาพโลโก้จากเครื่อง ระบบจะจำไว้ในเบราว์เซอร์นี้</p>
-        <div class="row">
-          <button class="btn" id="btn-logo" type="button">เลือกไฟล์โลโก้</button>
-          <button class="btn" id="btn-logo-reset" type="button">ใช้ข้อความแทน</button>
-        </div>
-        <input id="logo-file" type="file" accept="image/*" hidden>
+        <h2>ตั้งค่างาน</h2>
+        <p class="hint">แก้ไขชื่อบริษัท ชื่องาน และโลโก้กลางวงล้อ</p>
+        <div class="row"><button class="btn" id="btn-setup" type="button">เปิดหน้าตั้งค่างาน</button></div>
       </div>
     </aside>
   </main>
+</div>
+
+<div class="result" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="setup-title" style="z-index:150">
+  <div class="setup-card">
+    <div class="setup-icon" aria-hidden="true"></div>
+    <h3 id="setup-title">ตั้งค่างานจับรางวัล</h3>
+    <p class="hint">กรอกข้อมูลก่อนเริ่มใช้งาน ชื่อจะแสดงที่หัวหน้าจอ โลโก้จะอยู่กลางวงล้อ และบันทึกไว้ในเบราว์เซอร์เครื่องนี้</p>
+    <label class="f">ชื่อบริษัท<input type="text" id="set-company" placeholder="เช่น บริษัท ราชธานีลิสซิ่ง" autocomplete="organization"></label>
+    <label class="f">ชื่องาน<input type="text" id="set-event" placeholder="เช่น งานเลี้ยงสังสรรค์ประจำปี"></label>
+    <label class="f" style="margin-bottom:-2px">โลโก้บริษัท (ไม่บังคับ)</label>
+    <div class="logo-row">
+      <div class="logo-pv" id="setup-logo-pv"></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="row">
+          <button class="btn" id="btn-logo" type="button">เลือกไฟล์โลโก้</button>
+          <button class="btn" id="btn-logo-reset" type="button">ลบโลโก้</button>
+        </div>
+        <p class="hint">ไฟล์ภาพ PNG หรือ JPG</p>
+      </div>
+      <input id="logo-file" type="file" accept="image/*" hidden>
+    </div>
+    <p class="set-err" id="set-err" hidden>กรุณากรอกชื่อบริษัท</p>
+    <div class="actions">
+      <button class="btn primary" id="set-save" type="button">บันทึก</button>
+      <button class="btn" id="set-cancel" type="button">ยกเลิก</button>
+    </div>
+  </div>
 </div>
 
 <div class="result" id="imp" hidden role="dialog" aria-modal="true" aria-labelledby="imp-title">
@@ -1075,8 +1125,8 @@ textarea {
         var w = im.width * sc, h = im.height * sc;
         x.drawImage(im, (D - w) / 2, (D - h) / 2, w, h);
         var url = cv.toDataURL('image/jpeg', 0.88);
-        setLogo(url);
-        try { localStorage.setItem(LOGO_KEY, url); } catch (err) {}
+        setupLogo = url;
+        paintPreview();
       };
       im.src = reader.result;
     };
@@ -1084,9 +1134,62 @@ textarea {
     e.target.value = '';
   });
   $('btn-logo-reset').addEventListener('click', function () {
-    setLogo(null);
-    try { localStorage.removeItem(LOGO_KEY); } catch (e) {}
+    setupLogo = null;
+    paintPreview();
   });
+
+  /* ---------- setup dialog (shown on every page load) ---------- */
+  var SETUP_KEY = 'lucky-wheel-setup';
+  var setupLogo = null;
+  var setup = { company: '', event: '' };
+  try { var sv = JSON.parse(localStorage.getItem(SETUP_KEY) || 'null'); if (sv) setup = sv; } catch (e) {}
+
+  function paintPreview() {
+    var p = $('setup-logo-pv');
+    p.innerHTML = '';
+    if (setupLogo) {
+      var im = document.createElement('img'); im.alt = 'โลโก้'; im.src = setupLogo; p.appendChild(im);
+    } else {
+      p.textContent = 'ไม่มีโลโก้';
+    }
+  }
+  function applySetup() {
+    var company = setup.company || 'ราชธานี ลิสซิ่ง';
+    var ev = setup.event || 'วงล้อผู้โชคดี';
+    $('title-h1').textContent = ev;
+    $('title-sub').textContent = company + ' · วางรายชื่อ แล้วกด SPIN เพื่อจับรางวัล';
+    $('hubtext').textContent = company;
+    document.title = ev + ' · ' + company;
+  }
+  function openSetup() {
+    $('set-company').value = setup.company || '';
+    $('set-event').value = setup.event || '';
+    try { setupLogo = localStorage.getItem(LOGO_KEY); } catch (e) { setupLogo = null; }
+    paintPreview();
+    $('set-err').hidden = true;
+    $('set-cancel').hidden = !setup.company;
+    $('setup').hidden = false;
+    $('set-company').focus();
+  }
+  function closeSetup() { $('setup').hidden = true; }
+
+  $('set-save').addEventListener('click', function () {
+    var company = $('set-company').value.trim();
+    if (!company) { $('set-err').hidden = false; $('set-company').focus(); return; }
+    setup = { company: company, event: $('set-event').value.trim() };
+    try { localStorage.setItem(SETUP_KEY, JSON.stringify(setup)); } catch (e) {}
+    setLogo(setupLogo);
+    try { if (setupLogo) localStorage.setItem(LOGO_KEY, setupLogo); else localStorage.removeItem(LOGO_KEY); } catch (e) {}
+    applySetup();
+    closeSetup();
+  });
+  $('set-cancel').addEventListener('click', closeSetup);
+  ['set-company', 'set-event'].forEach(function (id) {
+    $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter') $('set-save').click(); });
+  });
+  $('btn-setup').addEventListener('click', openSetup);
+  applySetup();
+  openSetup();
 
   /* ---------- init ---------- */
   $('names-input').value = names.join('\n');
