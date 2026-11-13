@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 /* Layout: wheel stage on the right, import + winners panel on the left; stacks with the wheel first on phones. */
 :root {
@@ -214,6 +215,37 @@ textarea {
 }
 .win-list li span { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 
+.dup { margin: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--accent); font-size: 13.5px; font-weight: 600; }
+.dup .btn { padding: 4px 12px; font-size: 13px; }
+.h-right { display: flex; align-items: center; gap: 8px; }
+
+.imp-card {
+  width: min(100%, 720px); max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.imp-card h3 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 21px; }
+.imp-file { margin: -8px 0 0; color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.imp-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; }
+.imp-opts label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.imp-opts select {
+  font: inherit; color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+}
+.chk { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.chk input { width: 18px; height: 18px; accent-color: var(--accent); }
+.modes { display: flex; gap: 16px; flex-wrap: wrap; }
+.pv-wrap { overflow: auto; max-height: 300px; border: 1px solid var(--line); border-radius: 12px; }
+.pv { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.pv th, .pv td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.pv thead th { position: sticky; top: 0; background: var(--surface-2); font-weight: 700; color: var(--muted); }
+.pv .sel { background: var(--accent-soft); color: var(--fg); font-weight: 700; }
+.pv thead th.sel { color: var(--accent); }
+.pv .rn { color: var(--muted); width: 1%; }
+.imp-sum { margin: 0; font-weight: 600; }
+.imp-sum b { color: var(--accent); font-size: 1.15em; }
+.imp-card .row { justify-content: flex-end; }
+
 .result {
   position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
   background: var(--scrim);
@@ -229,6 +261,31 @@ textarea {
 .result-card .win { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(32px, 8vw, 60px); line-height: 1.15; color: var(--accent); overflow-wrap: anywhere; text-wrap: balance; }
 .result-card .meta { margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 .result-card .row { justify-content: center; margin-top: 10px; }
+
+/* Result popup sits inside the wheel; --S is the wheel diameter set from JS. */
+.disc .result {
+  position: absolute; inset: 0; z-index: 5; padding: 0; border-radius: 50%;
+  background: var(--scrim); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+  animation: resFade .25s ease;
+}
+.disc .result-card {
+  width: calc(var(--S) * 0.70); max-height: calc(var(--S) * 0.70); overflow: auto;
+  padding: calc(var(--S) * 0.03); gap: calc(var(--S) * 0.012); border-radius: calc(var(--S) * 0.04);
+  animation: resPop .4s cubic-bezier(.2, 1.4, .4, 1);
+}
+.disc .result-card .eyebrow { font-size: max(12px, calc(var(--S) * 0.026)); }
+.disc .result-card .win { font-size: calc(var(--S) * 0.075); }
+.disc .result-card .meta { font-size: max(11px, calc(var(--S) * 0.022)); }
+.disc .result-card .row { margin-top: calc(var(--S) * 0.01); gap: calc(var(--S) * 0.012); }
+.disc .result-card .btn { font-size: max(12px, calc(var(--S) * 0.024)); padding: calc(var(--S) * 0.012) calc(var(--S) * 0.022); }
+.disc .win-list {
+  max-height: calc(var(--S) * 0.32); gap: calc(var(--S) * 0.01);
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--S) * 0.25), 1fr));
+}
+.disc .win-list li { font-size: max(12px, calc(var(--S) * 0.03)); padding: calc(var(--S) * 0.01) calc(var(--S) * 0.016); }
+.disc .win-list li span { font-size: 0.7em; }
+@keyframes resPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes resFade { from { opacity: 0; } to { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
   .spin, .btn { transition: none; }
@@ -255,6 +312,18 @@ textarea {
             <div class="disc" id="disc">
               <canvas id="cv" role="img" aria-label="วงล้อรายชื่อผู้เข้าร่วม"></canvas>
               <div class="hub" id="hub"><span id="hubtext">ราชธานี<br>ลิสซิ่ง</span></div>
+              <div class="result" id="result" hidden role="dialog" aria-modal="true" aria-labelledby="res-name">
+                <div class="result-card">
+                  <p class="eyebrow" id="res-eyebrow">ผู้โชคดีคือ</p>
+                  <p class="win" id="res-name"></p>
+                  <ol class="win-list" id="res-list" hidden></ol>
+                  <p class="meta" id="res-meta"></p>
+                  <div class="row">
+                    <button class="btn danger" id="res-remove" type="button">ตัดชื่อออกจากวงล้อ</button>
+                    <button class="btn" id="res-close" type="button">เก็บชื่อไว้และปิด</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -270,9 +339,16 @@ textarea {
 
     <aside class="panel">
       <div class="panel-card">
-        <h2>นำเข้ารายชื่อ <span class="pill" id="count">250 คน</span></h2>
-        <p class="hint">พิมพ์หรือวางรายชื่อ บรรทัดละ 1 คน ตอนนี้เป็นรายชื่อตัวอย่าง 250 คน</p>
+        <h2 style="align-items:center">นำเข้ารายชื่อ
+          <span class="h-right">
+            <button class="icon-btn" id="btn-upload" type="button" title="อัปโหลดไฟล์ Excel/CSV (.xlsx .xls .csv .txt)" aria-label="อัปโหลดไฟล์ Excel/CSV"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></button>
+            <span class="pill" id="count">250 คน</span>
+          </span>
+        </h2>
+        <input id="names-file" type="file" accept=".xlsx,.xls,.csv,.txt" hidden>
+        <p class="hint">พิมพ์หรือวางรายชื่อ บรรทัดละ 1 คน หรือกดไอคอนไฟล์เพื่ออัปโหลด Excel/CSV</p>
         <textarea id="names-input" spellcheck="false" aria-label="รายชื่อผู้เข้าร่วม บรรทัดละ 1 คน"></textarea>
+        <p class="dup" id="dupnote" hidden><span id="duptext"></span><button class="btn" id="btn-dedupe" type="button">ลบชื่อซ้ำ</button></p>
         <p class="dirty" id="dirty" hidden>มีการแก้ไขที่ยังไม่ได้อัปเดตลงวงล้อ</p>
         <div class="row">
           <button class="btn primary" id="btn-import" type="button">อัปเดตรายชื่อลงวงล้อ</button>
@@ -304,15 +380,24 @@ textarea {
   </main>
 </div>
 
-<div class="result" id="result" hidden role="dialog" aria-modal="true" aria-labelledby="res-name">
-  <div class="result-card">
-    <p class="eyebrow" id="res-eyebrow">ผู้โชคดีคือ</p>
-    <p class="win" id="res-name"></p>
-    <ol class="win-list" id="res-list" hidden></ol>
-    <p class="meta" id="res-meta"></p>
+<div class="result" id="imp" hidden role="dialog" aria-modal="true" aria-labelledby="imp-title">
+  <div class="imp-card">
+    <h3 id="imp-title">นำเข้ารายชื่อจากไฟล์</h3>
+    <p class="imp-file" id="imp-file"></p>
+    <div class="imp-opts">
+      <label class="f" id="imp-sheet-wrap">ชีต<select id="imp-sheet"></select></label>
+      <label class="f">คอลัมน์ที่เป็นชื่อ<select id="imp-col"></select></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="imp-header"> แถวแรกเป็นหัวตาราง (ไม่นำเข้า)</label>
+    <div class="pv-wrap"><table class="pv" id="imp-pv"></table></div>
+    <p class="imp-sum" id="imp-sum"></p>
+    <div class="modes">
+      <label class="chk"><input type="radio" name="imp-mode" value="replace" checked> แทนที่รายชื่อเดิม</label>
+      <label class="chk"><input type="radio" name="imp-mode" value="append"> เพิ่มต่อท้ายรายชื่อเดิม</label>
+    </div>
     <div class="row">
-      <button class="btn danger" id="res-remove" type="button">ตัดชื่อออกจากวงล้อ</button>
-      <button class="btn" id="res-close" type="button">เก็บชื่อไว้และปิด</button>
+      <button class="btn" id="imp-cancel" type="button">ยกเลิก</button>
+      <button class="btn primary" id="imp-ok" type="button" style="flex:0 0 auto">นำเข้าลงวงล้อ</button>
     </div>
   </div>
 </div>
@@ -452,6 +537,7 @@ textarea {
     hub.style.fontSize = Math.max(10, Math.round(S * 0.026)) + 'px';
     disc.style.width = S + 'px';
     disc.style.height = S + 'px';
+    disc.style.setProperty('--S', S + 'px');
     canvas.style.transform = 'rotate(' + rotation + 'deg)';
     updateTicker();
   }
@@ -494,6 +580,7 @@ textarea {
     $('dirty').hidden = true;
     $('qty').max = Math.max(1, names.length);
     if (names.length) getQty();
+    checkDupes();
     draw();
   }
 
@@ -501,7 +588,175 @@ textarea {
     var cur = parseNames($('names-input').value);
     var same = cur.length === names.length && cur.every(function (v, i) { return v === names[i]; });
     $('dirty').hidden = same;
+    checkDupes();
   }
+
+  /* ---------- duplicates ---------- */
+  function dedupe(list) {
+    var seen = Object.create(null), out = [];
+    list.forEach(function (v) { var k = v.toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(v); } });
+    return out;
+  }
+  function checkDupes() {
+    var cur = parseNames($('names-input').value);
+    var d = cur.length - dedupe(cur).length;
+    $('dupnote').hidden = d === 0;
+    $('duptext').textContent = '⚠️ พบชื่อซ้ำ ' + d + ' รายการ';
+  }
+  $('btn-dedupe').addEventListener('click', function () {
+    if (spinning) return;
+    setNames(dedupe(parseNames($('names-input').value)), true);
+  });
+
+  /* ---------- file import ---------- */
+  var imp = { wb: null, rows: [] };
+  function decodeText(buf) {
+    var b = new Uint8Array(buf);
+    if (b[0] === 0xFF && b[1] === 0xFE) return new TextDecoder('utf-16le').decode(buf);
+    if (b[0] === 0xFE && b[1] === 0xFF) return new TextDecoder('utf-16be').decode(buf);
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf).replace(/^\uFEFF/, ''); }
+    catch (e) {
+      try { return new TextDecoder('windows-874').decode(buf); }
+      catch (e2) { return new TextDecoder('utf-8').decode(buf); }
+    }
+  }
+  function textToRows(text) {
+    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim() !== ''; });
+    var sample = lines.slice(0, 20).join('\n');
+    var delim = ['\t', ',', ';', '|'].reduce(function (best, d) {
+      var c = sample.split(d).length; return c > best.c ? { d: d, c: c } : best;
+    }, { d: null, c: lines.slice(0, 20).length }).d;
+    if (!delim) return lines.map(function (l) { return [l]; });
+    return lines.map(function (line) {
+      var out = [], cur = '', q = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+        else if (ch === '"') q = true;
+        else if (ch === delim) { out.push(cur); cur = ''; }
+        else cur += ch;
+      }
+      out.push(cur);
+      return out;
+    });
+  }
+  function colName(c) { var s = ''; c++; while (c > 0) { var m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; }
+  var NAME_RE = /ชื่อ|name|ผู้|พนักงาน|ลูกค้า/i;
+
+  function setRows(rows) {
+    imp.rows = rows.map(function (r) { return r.map(function (v) { return v == null ? '' : String(v).trim(); }); })
+      .filter(function (r) { return r.some(function (v) { return v !== ''; }); });
+    var ncol = imp.rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0) || 1;
+    var first = imp.rows[0] || [];
+    var hdr = imp.rows.length > 1 && first.some(function (v) { return NAME_RE.test(v) || /^(no\.?|ลำดับ|รหัส|id)$/i.test(v); });
+    $('imp-header').checked = hdr;
+    var best = 0, bestScore = -1;
+    for (var c = 0; c < ncol; c++) {
+      var score = 0;
+      if (hdr && NAME_RE.test(first[c] || '')) score += 1000;
+      imp.rows.slice(hdr ? 1 : 0, 60).forEach(function (r) { var v = r[c] || ''; if (v && !/^[\d\s.,\-\/:]+$/.test(v)) score++; });
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+    imp.ncol = ncol;
+    fillCols(best);
+    renderPreview();
+  }
+  function fillCols(sel) {
+    var s = $('imp-col'), hdr = $('imp-header').checked, first = imp.rows[0] || [];
+    s.innerHTML = '';
+    for (var c = 0; c < imp.ncol; c++) {
+      var o = document.createElement('option');
+      o.value = c;
+      var label = hdr && first[c] ? first[c] : (imp.rows[hdr ? 1 : 0] || [])[c] || '';
+      o.textContent = 'คอลัมน์ ' + colName(c) + (label ? ' · ' + label.slice(0, 30) : '');
+      s.appendChild(o);
+    }
+    s.value = sel;
+  }
+  function extract() {
+    var c = +$('imp-col').value || 0;
+    return imp.rows.slice($('imp-header').checked ? 1 : 0)
+      .map(function (r) { return (r[c] || '').trim(); })
+      .filter(function (v) { return v !== ''; });
+  }
+  function renderPreview() {
+    var t = $('imp-pv'), c = +$('imp-col').value || 0, hdr = $('imp-header').checked;
+    var cols = Math.min(imp.ncol, 12);
+    var html = '<thead><tr><th class="rn">#</th>';
+    for (var i = 0; i < cols; i++) {
+      var h = hdr ? (imp.rows[0] || [])[i] || colName(i) : colName(i);
+      html += '<th' + (i === c ? ' class="sel"' : '') + '>' + esc(h) + '</th>';
+    }
+    html += '</tr></thead><tbody>';
+    var data = imp.rows.slice(hdr ? 1 : 0);
+    data.slice(0, 10).forEach(function (r, k) {
+      html += '<tr><td class="rn">' + (k + 1) + '</td>';
+      for (var j = 0; j < cols; j++) html += '<td' + (j === c ? ' class="sel"' : '') + '>' + esc(r[j] || '') + '</td>';
+      html += '</tr>';
+    });
+    if (data.length > 10) html += '<tr><td class="rn"></td><td colspan="' + cols + '" style="color:var(--muted)">… และอีก ' + (data.length - 10) + ' แถว</td></tr>';
+    t.innerHTML = html + '</tbody>';
+    var list = extract(), d = list.length - dedupe(list).length;
+    $('imp-sum').innerHTML = 'จะนำเข้า <b>' + list.length + '</b> ชื่อ' + (d ? ' <span style="color:var(--danger)">(มีชื่อซ้ำ ' + d + ' รายการ)</span>' : '');
+    $('imp-ok').disabled = list.length === 0;
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); }
+  function loadSheet() {
+    var ws = imp.wb.Sheets[$('imp-sheet').value];
+    setRows(window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false, blankrows: false }));
+  }
+  function openImport(fileName) {
+    $('imp-file').textContent = 'ไฟล์: ' + fileName;
+    var s = $('imp-sheet');
+    s.innerHTML = '';
+    if (imp.wb) {
+      imp.wb.SheetNames.forEach(function (n) { var o = document.createElement('option'); o.value = o.textContent = n; s.appendChild(o); });
+      $('imp-sheet-wrap').hidden = imp.wb.SheetNames.length < 2;
+      loadSheet();
+    } else {
+      $('imp-sheet-wrap').hidden = true;
+    }
+    $('imp').hidden = false;
+    $('imp-col').focus();
+  }
+  function closeImport() { $('imp').hidden = true; }
+
+  $('btn-upload').addEventListener('click', function () { if (!spinning) $('names-file').click(); });
+  $('names-file').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    var ext = (f.name.split('.').pop() || '').toLowerCase();
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        if (ext === 'csv' || ext === 'txt') {
+          imp.wb = null;
+          setRows(textToRows(decodeText(reader.result)));
+        } else {
+          if (!window.XLSX) { alert('โหลดตัวอ่าน Excel ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต หรือบันทึกไฟล์เป็น CSV'); return; }
+          imp.wb = window.XLSX.read(new Uint8Array(reader.result), { type: 'array', codepage: 874 });
+        }
+        openImport(f.name);
+      } catch (err) {
+        alert('อ่านไฟล์ไม่ได้: ' + (err && err.message ? err.message : err));
+      }
+    };
+    reader.readAsArrayBuffer(f);
+  });
+  $('imp-sheet').addEventListener('change', loadSheet);
+  $('imp-col').addEventListener('change', renderPreview);
+  $('imp-header').addEventListener('change', function () { fillCols(+$('imp-col').value || 0); renderPreview(); });
+  $('imp-cancel').addEventListener('click', closeImport);
+  $('imp').addEventListener('click', function (e) { if (e.target === $('imp')) closeImport(); });
+  $('imp-ok').addEventListener('click', function () {
+    var list = extract();
+    if (!list.length) return;
+    var mode = document.querySelector('input[name="imp-mode"]:checked').value;
+    var base = mode === 'append' ? parseNames($('names-input').value) : [];
+    setNames(base.concat(list), true);
+    closeImport();
+  });
 
   $('names-input').addEventListener('input', checkDirty);
   $('btn-import').addEventListener('click', function () {
@@ -723,6 +978,7 @@ textarea {
     $('spin').focus();
   });
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('imp').hidden) { closeImport(); return; }
     if (e.key === 'Escape' && !$('result').hidden) { hideResult(); $('spin').focus(); }
   });
 
@@ -828,6 +1084,7 @@ textarea {
 
   /* ---------- init ---------- */
   $('names-input').value = names.join('\n');
+  checkDupes();
   renderHistory();
   computeSize();
   draw();
