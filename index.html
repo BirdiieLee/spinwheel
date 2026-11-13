@@ -269,21 +269,27 @@ textarea {
   animation: resFade .25s ease;
 }
 .disc .result-card {
-  width: calc(var(--S) * 0.70); max-height: calc(var(--S) * 0.70); overflow: auto;
-  padding: calc(var(--S) * 0.03); gap: calc(var(--S) * 0.012); border-radius: calc(var(--S) * 0.04);
+  --cw: min(calc(var(--S) * 1.2), calc(100vw - 24px));
+  width: var(--cw); max-width: none; margin-inline: calc((var(--S) - var(--cw)) / 2);
+  max-height: var(--S); overflow: auto;
+  padding: calc(var(--S) * 0.04); gap: calc(var(--S) * 0.014); border-radius: calc(var(--S) * 0.045);
   animation: resPop .4s cubic-bezier(.2, 1.4, .4, 1);
 }
-.disc .result-card .eyebrow { font-size: max(12px, calc(var(--S) * 0.026)); }
-.disc .result-card .win { font-size: calc(var(--S) * 0.075); }
-.disc .result-card .meta { font-size: max(11px, calc(var(--S) * 0.022)); }
-.disc .result-card .row { margin-top: calc(var(--S) * 0.01); gap: calc(var(--S) * 0.012); }
-.disc .result-card .btn { font-size: max(12px, calc(var(--S) * 0.024)); padding: calc(var(--S) * 0.012) calc(var(--S) * 0.022); }
+.disc .result-card .eyebrow { font-size: max(13px, calc(var(--S) * 0.032)); }
+.disc .result-card .win { font-size: calc(var(--S) * 0.1); color: var(--accent); }
+.disc .result-card .meta { font-size: max(12px, calc(var(--S) * 0.024)); }
+.disc .result-card .row { margin-top: calc(var(--S) * 0.012); gap: calc(var(--S) * 0.014); }
+.disc .result-card .btn { font-size: max(13px, calc(var(--S) * 0.028)); padding: calc(var(--S) * 0.014) calc(var(--S) * 0.026); }
 .disc .win-list {
-  max-height: calc(var(--S) * 0.32); gap: calc(var(--S) * 0.01);
-  grid-template-columns: repeat(auto-fill, minmax(calc(var(--S) * 0.25), 1fr));
+  max-height: calc(var(--S) * 0.62); gap: calc(var(--S) * 0.01);
+  grid-template-columns: 1fr;
 }
-.disc .win-list li { font-size: max(12px, calc(var(--S) * 0.03)); padding: calc(var(--S) * 0.01) calc(var(--S) * 0.016); }
-.disc .win-list li span { font-size: 0.7em; }
+.disc .win-list li {
+  justify-content: center; text-align: center; color: var(--accent);
+  font-family: var(--font-display); font-weight: 800; line-height: 1.2;
+  font-size: max(20px, calc(var(--S) * 0.065)); padding: calc(var(--S) * 0.012) calc(var(--S) * 0.02);
+}
+.disc .win-list li span { font-size: 0.55em; color: var(--muted); }
 @keyframes resPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes resFade { from { opacity: 0; } to { opacity: 1; } }
 
@@ -1096,13 +1102,3 @@ textarea {
     if (mq.addEventListener) mq.addEventListener('change', draw);
   }
   new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  if (document.fonts && document.fonts.load) {
-    Promise.all([
-      document.fonts.load('600 12px "Noto Sans Thai"'),
-      document.fonts.load('800 20px Kanit')
-    ]).then(draw, function () {});
-  }
-})();
-</script>
-</body>
-</html>
